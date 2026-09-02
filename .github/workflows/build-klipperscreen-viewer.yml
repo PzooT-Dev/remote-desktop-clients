@@ -45,10 +45,10 @@ jobs:
           chmod +x download-prebuilt-dependencies.sh
           ./download-prebuilt-dependencies.sh
 
-      - name: Prepare bVNC project
+      - name: Prepare VNC project from prebuilt dependencies
         run: |
           chmod +x bVNC/prepare_project.sh
-          ./bVNC/prepare_project.sh --skip-build libs nopath
+          ./bVNC/prepare_project.sh --skip-build freebVNC "$ANDROID_HOME"
 
       - name: Apply KlipperScreen toolbar patch
         run: python3 tools/klipperscreen_patch.py

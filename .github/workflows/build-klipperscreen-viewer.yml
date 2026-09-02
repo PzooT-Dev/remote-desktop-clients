@@ -1,0 +1,77 @@
+name: Build KlipperScreen Viewer APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - klipperscreen-viewer
+    paths:
+      - 'tools/klipperscreen_patch.py'
+      - '.github/workflows/build-klipperscreen-viewer.yml'
+      - 'bVNC/**'
+      - 'freebVNC-app/**'
+      - 'gradle/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - 'download-prebuilt-dependencies.sh'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+
+      - name: Download upstream prebuilt native dependencies
+        run: |
+          chmod +x download-prebuilt-dependencies.sh
+          ./download-prebuilt-dependencies.sh
+
+      - name: Prepare bVNC project
+        run: |
+          chmod +x bVNC/prepare_project.sh
+          ./bVNC/prepare_project.sh --skip-build libs nopath
+
+      - name: Apply KlipperScreen toolbar patch
+        run: python3 tools/klipperscreen_patch.py
+
+      - name: Build universal debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew :freebVNC-app:assembleDebug --stacktrace
+
+      - name: Collect universal APK
+        run: |
+          mkdir -p dist
+          find freebVNC-app/build/outputs/apk -type f -name '*.apk' -print
+          APK=$(find freebVNC-app/build/outputs/apk -type f -name '*universal*debug*.apk' | head -n 1)
+          if [ -z "$APK" ]; then
+            APK=$(find freebVNC-app/build/outputs/apk -type f -name '*debug*.apk' | head -n 1)
+          fi
+          test -n "$APK"
+          cp "$APK" dist/KlipperScreen-Viewer-debug.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KlipperScreen-Viewer-APK
+          path: dist/KlipperScreen-Viewer-debug.apk
+          if-no-files-found: error

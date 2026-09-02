@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - master
       - klipperscreen-viewer
     paths:
       - 'tools/klipperscreen_patch.py'

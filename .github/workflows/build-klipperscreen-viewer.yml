@@ -55,8 +55,17 @@ jobs:
 
       - name: Build universal debug APK
         run: |
+          set -o pipefail
           chmod +x gradlew
-          ./gradlew :freebVNC-app:assembleDebug --stacktrace
+          ./gradlew :freebVNC-app:assembleDebug --stacktrace --console=plain 2>&1 | tee gradle-build.log
+
+      - name: Upload Gradle build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle-build.log
+          if-no-files-found: warn
 
       - name: Collect universal APK
         run: |
